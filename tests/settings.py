@@ -36,6 +36,11 @@ CACHES = {
         'LOCATION': 'redis://127.0.0.1:6379/15',
         'TIMEOUT': None,
     },
+    'exports': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'pootle-test-exports',
+        'TIMEOUT': 259200,  # 3 days.
+    },
 }
 
 # Using synchronous mode for testing

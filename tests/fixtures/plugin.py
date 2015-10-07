@@ -27,14 +27,23 @@ def git_plugin(tutorial, tmpdir, settings, system, english, zulu):
             os.path.dirname(pootle_fs_pytest.__file__),
             "data/fs/example_fs"))
     repo_path = os.path.join(dir_path, "__git_src__")
+    tmp_repo_path = os.path.join(dir_path, "__tmp_git_src__")
     if os.path.exists(repo_path):
         shutil.rmtree(repo_path)
-    shutil.copytree(src_path, repo_path)
-
-    repo = Repo.init(repo_path)
-    repo.index.add([".pootle.ini", "*"])
-    repo.index.commit("Initial commit")
-
+    if os.path.exists(tmp_repo_path):
+        shutil.rmtree(tmp_repo_path)
+    repo = Repo.init(repo_path, bare=True)
+    tmp_repo = repo.clone(tmp_repo_path)
+    for f in os.listdir(src_path):
+        src = os.path.join(src_path, f)
+        target = os.path.join(tmp_repo_path, f)
+        if os.path.isdir(src):
+            shutil.copytree(src, target)
+        else:
+            shutil.copyfile(src, target)
+    tmp_repo.index.add([".pootle.ini", "*"])
+    tmp_repo.index.commit("Initial commit")
+    tmp_repo.remotes.origin.push()
     settings.POOTLE_FS_PATH = dir_path
     tutorial_path = os.path.join(dir_path, tutorial.code)
     if os.path.exists(tutorial_path):
