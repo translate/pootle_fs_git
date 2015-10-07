@@ -10,7 +10,6 @@ from pootle_fs import Plugin, plugins, FSFile
 logger = logging.getLogger(__name__)
 
 
-
 class GitBranch(object):
 
     def __init__(self, plugin, name):
@@ -129,14 +128,16 @@ class GitPlugin(Plugin):
         # checkout master
         pass
 
-    def push_translations(self, msg=None, prune=False, pootle_path=None, fs_path=None):
+    def push_translations(self, msg=None, prune=False,
+                          pootle_path=None, fs_path=None):
         status = self.status(pootle_path=pootle_path, fs_path=fs_path)
         with tmp_branch(self) as branch:
             logger.info(
                 "Committing/pushing git repository(%s): %s"
                 % (self.project.code, self.fs.url))
             super(GitPlugin, self).push_translations(
-                prune=prune, pootle_path=pootle_path, fs_path=fs_path, status=status)
+                prune=prune, pootle_path=pootle_path,
+                fs_path=fs_path, status=status)
             branch.commit(msg)
             branch.push()
 
