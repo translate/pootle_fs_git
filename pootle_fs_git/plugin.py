@@ -39,18 +39,22 @@ class GitPlugin(Plugin):
     def push_translations(self, msg=None, prune=False,
                           pootle_path=None, fs_path=None):
         status = self.status(pootle_path=pootle_path, fs_path=fs_path)
+        response = []
         with tmp_branch(self) as branch:
-            pushed, pruned = self.push_translation_files(
+            response = self.push_translation_files(
                 prune=prune, pootle_path=pootle_path,
                 fs_path=fs_path, status=status)
-            if pushed or pruned:
+            if response.made_changes:
                 logger.info(
                     "Committing/pushing git repository(%s): %s"
                     % (self.project.code, self.fs.url))
                 branch.commit(msg)
                 branch.push()
-        for status in pushed:
-            fs_file = status.store_fs.file
-            fs_file.on_sync(
-                fs_file.latest_hash,
-                status.store_fs.store.get_max_unit_revision())
+
+        for action_status in response.success:
+            if action_status.action == "pushed_to_fs":
+                fs_file = action_status.store_fs.file
+                fs_file.on_sync(
+                    fs_file.latest_hash,
+                    action_status.store_fs.store.get_max_unit_revision())
+        return response

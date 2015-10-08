@@ -10,10 +10,8 @@
 import pytest
 from ConfigParser import ConfigParser
 
-from pootle_store.models import Store
-
-from pootle_fs_pytest.utils import (
-    _test_status)
+from pootle_fs_pytest.suite import (
+    run_add_test, run_fetch_test, run_pull_test, run_push_test)
 
 
 @pytest.mark.django
@@ -50,53 +48,25 @@ def test_plugin_read_config(git_plugin):
     assert config.sections() == ['default', 'subdir1', 'subdir2', 'subdir3']
 
 
+# Parametrized FETCH
 @pytest.mark.django
-def test_plugin_push_translations(git_plugin_pulled, expected_fs_stores):
-    plugin = git_plugin_pulled
-
-    # add a Store object
-    sibling = plugin.stores.get(
-        pootle_path="/en/tutorial/subdir1/example1.po")
-    Store.objects.create(
-        parent=sibling.parent,
-        translation_project=sibling.translation_project,
-        name="example5.po")
-
-    status = plugin.status()
-    assert status.has_changed is True
-    assert len(status["pootle_untracked"]) == 1
-
-    plugin.add_translations()
-
-    status = plugin.status()
-    assert status.has_changed is True
-    assert len(status["pootle_added"]) == 1
-
-    plugin.push_translations()
-    status = plugin.status()
-    assert status.has_changed is False
+def test_plugin_fetch_translations(git_plugin_suite, fetch_translations):
+    run_fetch_test(git_plugin_suite, **fetch_translations)
 
 
-# Parametrized PATH_FILTERS
+# Parametrized ADD
 @pytest.mark.django
-def test_plugin_fetch_paths(git_fetch_paths):
-    plugin, path, outcome = git_fetch_paths
-    plugin.fetch_translations(**path)
-    status = plugin.status()
-    assert outcome == {k: len(status[k]) for k in status}
+def test_plugin_add_translations(git_plugin_suite, add_translations):
+    run_add_test(git_plugin_suite, **add_translations)
 
 
-# Parametrized: CONFLICT
+# Parametrized PUSH
 @pytest.mark.django
-def test_plugin_conflict(git_plugin_conflicted_param):
-    name, plugin, callback, outcome = git_plugin_conflicted_param
-    conflict_type = "conflict"
-    if name.startswith("conflict_untracked"):
-        conflict_type = "conflict_untracked"
-    conflict = plugin.status()[conflict_type]
-    assert conflict
-    callback(plugin)
-    if not outcome:
-        outcome = {
-            conflict_type: [(x.pootle_path, x.fs_path) for x in conflict]}
-    _test_status(plugin, outcome)
+def test_plugin_push_translations(git_plugin_suite, push_translations):
+    run_push_test(git_plugin_suite, **push_translations)
+
+
+# Parametrized PULL
+@pytest.mark.django
+def test_plugin_pull_translations(git_plugin_suite, pull_translations):
+    run_pull_test(git_plugin_suite, **pull_translations)
