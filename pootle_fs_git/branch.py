@@ -51,9 +51,14 @@ class GitBranch(object):
                 "Checking out git branch (%s): %s"
                 % (self.project.code, self.name))
 
+    def add(self, paths):
+        self.repo.index.add(paths)
+        logger.info(
+            "Adding paths (%s): %s"
+            % (self.project.code, self.name))
+
     def commit(self, msg):
         # commit
-        self.repo.index.add(["*"])
         self.repo.index.commit("Updating repo")
         logger.info(
             "Committing from git branch (%s): %s"
@@ -61,10 +66,14 @@ class GitBranch(object):
 
     def push(self):
         # push to remote/$master
-        self.repo.remotes.origin.push(
+        result = self.repo.remotes.origin.push(
             "%s:%s"
             % (self.name, self.master.name))
-        # TODO: check the push summary info to ensure success
+
+        if result.flags != 256:
+            # TODO: finish this!
+            raise Exception
+
         logger.info(
             "Pushing to remote git branch (%s): %s"
             % (self.project.code, self.name))

@@ -1,4 +1,5 @@
 import logging
+import os
 
 from git import Repo
 
@@ -48,6 +49,12 @@ class GitPlugin(Plugin):
                 logger.info(
                     "Committing/pushing git repository(%s): %s"
                     % (self.project.code, self.fs.url))
+                paths = [
+                    os.path.join(self.local_fs_path, x.fs_path.strip("/"))
+                    for x
+                    in response['pushed_to_fs']]
+                if paths:
+                    branch.add(paths)
                 branch.commit(msg)
                 branch.push()
 
