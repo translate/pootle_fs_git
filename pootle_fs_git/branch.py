@@ -6,6 +6,10 @@ import uuid
 logger = logging.getLogger(__name__)
 
 
+class PushError(Exception):
+    pass
+
+
 class GitBranch(object):
 
     def __init__(self, plugin, name):
@@ -70,9 +74,8 @@ class GitBranch(object):
             "%s:%s"
             % (self.name, self.master.name))
 
-        if result.flags != 256:
-            # TODO: finish this!
-            raise Exception
+        if result[0].flags != 256:
+            raise PushError("Commit was unsuccessful")
 
         logger.info(
             "Pushing to remote git branch (%s): %s"
@@ -91,5 +94,7 @@ class GitBranch(object):
 def tmp_branch(plugin):
     branch = GitBranch(plugin, uuid.uuid4().hex)
     branch.checkout()
-    yield branch
-    branch.destroy()
+    try:
+        yield branch
+    finally:
+        branch.destroy()
