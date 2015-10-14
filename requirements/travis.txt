@@ -1,0 +1,9 @@
+-r base.txt
+
+factory_boy>=2.5
+pytest
+pytest-django>=2.8,<2.9
+coveralls
+MySQL-python
+psycopg2
+pep8

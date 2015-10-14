@@ -1,0 +1,34 @@
+# https://travis-ci.org/#!/phlax/pootle_fs
+sudo: false
+language: python
+python:
+  - 2.7
+env:
+  matrix:
+    - DJANGO_VERSION=1.7.10 DATABASE_BACKEND=sqlite
+    - DJANGO_VERSION=1.7.10 DATABASE_BACKEND=postgres
+    - DJANGO_VERSION=1.7.10 DATABASE_BACKEND=mysql_innodb
+cache:
+  apt: true
+  directories:
+    - pootle/assets/js/node_modules
+    - $HOME/.cache/pip
+    - docs/_build
+install:
+  - pip install --upgrade pip # FIXME remove once Travis support pip7 by default
+  - CFLAGS="-O0" pip install -r requirements/travis.txt
+  - pip install "Django>=$DJANGO_VERSION,<"$(echo $(echo $DJANGO_VERSION | cut -d"." -f1).$(( $(echo $DJANGO_VERSION | cut -d"." -f2) + 1 )) )
+  - pip install .
+  - pip freeze  # Print all installed versions for reference.
+  - git config --global user.email "travis@ci.com"
+  - git config --global user.name "Travis Runner"
+
+before_script:
+  - if [[ $DATABASE_BACKEND == 'postgres' ]]; then psql -c 'create database pootle;' -U postgres; fi
+  - if [[ $DATABASE_BACKEND == 'mysql_innodb' ]]; then mysql -e 'create database pootle CHARACTER SET utf8 COLLATE utf8_general_ci;'; fi
+  - if [[ $DATABASE_BACKEND == 'mysql_innodb' ]]; then mysql -e "SET GLOBAL wait_timeout = 36000;"; fi
+script:
+  - py.test -vv
+services:
+  - redis-server
+

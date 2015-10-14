@@ -56,10 +56,18 @@ class GitBranch(object):
                 % (self.project.code, self.name))
 
     def add(self, paths):
-        self.repo.index.add(paths)
-        logger.info(
-            "Adding paths (%s): %s"
-            % (self.project.code, self.name))
+        if paths:
+            self.repo.index.add(paths)
+            logger.info(
+                "Adding paths (%s): %s"
+                % (self.project.code, self.name))
+
+    def rm(self, paths):
+        if paths:
+            self.repo.index.remove(paths)
+            logger.info(
+                "Removing path (%s): %s"
+                % (self.project.code, self.name))
 
     def commit(self, msg):
         # commit

@@ -1,0 +1,2 @@
+-e git+https://github.com/phlax/pootle@no_mtime#egg=pootle
+-e git+https://github.com/translate/pootle_fs#egg=pootle_fs

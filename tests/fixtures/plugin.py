@@ -39,8 +39,9 @@ def git_plugin(fs_plugin_base):
                 shutil.copyfile(src, target)
         tmp_repo.index.add([".pootle.ini", "*"])
         tmp_repo.index.commit("Initial commit")
-        tmp_repo.remotes.origin.push()
-    return create_plugin("git", fs_plugin_base)
+        tmp_repo.remotes.origin.push("master:master")
+
+    return create_plugin("git", fs_plugin_base, register=False)
 
 
 def _git_edit(plugin, filepath):
