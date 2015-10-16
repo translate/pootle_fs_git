@@ -4,7 +4,6 @@ import os
 from git import Repo
 
 from pootle_fs import Plugin
-from pootle_fs.status import ActionResponse
 
 from .branch import tmp_branch, PushError
 from .files import GitFSFile
@@ -38,14 +37,18 @@ class GitPlugin(Plugin):
         self.pull()
         return self.repo.commit().hexsha
 
-    def push_translations(self, msg=None, prune=False,
-                          pootle_path=None, fs_path=None):
-        status = self.status(pootle_path=pootle_path, fs_path=fs_path)
-        response = ActionResponse(self)
+    def push_translations(self, msg=None, pootle_path=None, fs_path=None,
+                          response=None, status=None):
+        if status is None:
+            status = self.status(pootle_path=pootle_path, fs_path=fs_path)
+        if response is None:
+            response or self.response_class(self)
+        if not status.has_changed:
+            return
         try:
             with tmp_branch(self) as branch:
                 response = self.push_translation_files(
-                    prune=prune, pootle_path=pootle_path,
+                    pootle_path=pootle_path,
                     fs_path=fs_path, status=status,
                     response=response)
                 if response.made_changes:
@@ -64,14 +67,14 @@ class GitPlugin(Plugin):
                             self.local_fs_path,
                             x.fs_path.strip("/"))
                         for x
-                        in response['pruned_from_fs']]
+                        in response['removed']]
                     branch.rm(rm_paths)
                     branch.commit(msg)
                     branch.push()
         except PushError:
             for action in response["pushed_to_fs"]:
                 action.failed = True
-            for action in response["pruned_from_fs"]:
+            for action in response["removed"]:
                 action.failed = True
 
         for action_status in response.completed("pushed_to_fs"):

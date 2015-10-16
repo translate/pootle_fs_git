@@ -13,9 +13,27 @@ import pytest
 from ConfigParser import ConfigParser
 
 from pootle_fs_pytest.suite import (
-    run_add_test, run_fetch_test, run_pull_test, run_push_test)
+    run_add_test, run_fetch_test, run_rm_test)
 
 from ..fixtures.plugin import tmp_git
+
+
+def _check_git_fs(plugin, response):
+    with tmp_git(plugin.repo) as (tmp_repo_path, tmp_repo):
+        assert all(
+            os.path.exists(
+                os.path.join(
+                    tmp_repo_path,
+                    p.fs_path.strip("/")))
+            for p
+            in response["pushed_to_fs"])
+        assert not any(
+            os.path.exists(
+                os.path.join(
+                    tmp_repo_path,
+                    p.fs_path.strip("/")))
+            for p
+            in response["pruned_from_fs"])
 
 
 @pytest.mark.django
@@ -55,41 +73,20 @@ def test_plugin_read_config(git_plugin):
 # Parametrized FETCH
 @pytest.mark.django
 def test_plugin_fetch_translations(git_plugin_suite, fetch_translations):
+    fetch_translations["check_fs"] = _check_git_fs
     run_fetch_test(git_plugin_suite, **fetch_translations)
 
 
 # Parametrized ADD
 @pytest.mark.django
 def test_plugin_add_translations(git_plugin_suite, add_translations):
+    add_translations["check_fs"] = _check_git_fs
     run_add_test(git_plugin_suite, **add_translations)
 
 
-def _check_git_fs(plugin, response):
-    with tmp_git(plugin.repo) as (tmp_repo_path, tmp_repo):
-        assert all(
-            os.path.exists(
-                os.path.join(
-                    tmp_repo_path,
-                    p.fs_path.strip("/")))
-            for p
-            in response["pushed_to_fs"])
-        assert not any(
-            os.path.exists(
-                os.path.join(
-                    tmp_repo_path,
-                    p.fs_path.strip("/")))
-            for p
-            in response["pruned_from_fs"])
-
-
-# Parametrized PUSH
+# Parametrized RM
 @pytest.mark.django
-def test_plugin_push_translations(git_plugin_suite, push_translations):
-    push_translations["check_fs"] = _check_git_fs
-    run_push_test(git_plugin_suite, **push_translations)
+def test_plugin_rm_translations(git_plugin_suite, rm_translations):
+    rm_translations["check_fs"] = _check_git_fs
+    run_rm_test(git_plugin_suite, **rm_translations)
 
-
-# Parametrized PULL
-@pytest.mark.django
-def test_plugin_pull_translations(git_plugin_suite, pull_translations):
-    run_pull_test(git_plugin_suite, **pull_translations)
