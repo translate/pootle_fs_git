@@ -45,7 +45,7 @@ def git_plugin(fs_plugin_base):
 
 
 def _git_edit(plugin, filepath):
-    with tmp_git(plugin.repo) as (tmp_repo_path, tmp_repo):
+    with tmp_git(Repo(plugin.fs.url)) as (tmp_repo_path, tmp_repo):
         po_file = os.path.join(
             tmp_repo_path, filepath.strip("/"))
         dir_name = os.path.dirname(po_file)
