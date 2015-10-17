@@ -12,8 +12,9 @@ from pootle_fs_pytest.utils import (
 
 
 @contextmanager
-def tmp_git(repo):
+def tmp_git(url):
     from django.conf import settings
+    repo = Repo(url)
     tmp_repo_path = os.path.join(
         settings.POOTLE_FS_PATH, "__tmp_git_src__")
     if os.path.exists(tmp_repo_path):
@@ -28,8 +29,8 @@ def git_plugin(fs_plugin_base):
     tutorial, src_path, repo_path, dir_path = fs_plugin_base
     if os.path.exists(repo_path):
         shutil.rmtree(repo_path)
-    repo = Repo.init(repo_path, bare=True)
-    with tmp_git(repo) as (tmp_repo_path, tmp_repo):
+    Repo.init(repo_path, bare=True)
+    with tmp_git(repo_path) as (tmp_repo_path, tmp_repo):
         for f in os.listdir(src_path):
             src = os.path.join(src_path, f)
             target = os.path.join(tmp_repo_path, f)
@@ -44,22 +45,26 @@ def git_plugin(fs_plugin_base):
     return create_plugin("git", fs_plugin_base, register=False)
 
 
-def _git_edit(plugin, filepath):
-    with tmp_git(Repo(plugin.fs.url)) as (tmp_repo_path, tmp_repo):
+def _git_edit(plugin, filepath, content=None, message=None):
+    with tmp_git(plugin.fs.url) as (tmp_repo_path, tmp_repo):
         po_file = os.path.join(
             tmp_repo_path, filepath.strip("/"))
         dir_name = os.path.dirname(po_file)
         if not os.path.exists(dir_name):
             os.makedirs(dir_name)
+        if content is None:
+            content = str(datetime.now())
+        if message is None:
+            message = "Editing %s" % filepath
         with open(po_file, "w") as f:
-            f.write(str(datetime.now()))
+            f.write(content)
         tmp_repo.index.add([filepath.strip("/")])
-        tmp_repo.index.commit("Editing %s" % filepath)
+        tmp_repo.index.commit(message)
         tmp_repo.remotes.origin.push()
 
 
 def _git_remove(plugin, filepath):
-    with tmp_git(plugin.repo) as (tmp_repo_path, tmp_repo):
+    with tmp_git(plugin.fs.url) as (tmp_repo_path, tmp_repo):
         po_file = os.path.join(
             tmp_repo_path, filepath.strip("/"))
         os.unlink(po_file)

@@ -1,7 +1,8 @@
+from ConfigParser import NoOptionError
 import logging
 import os
 
-from git import Repo
+from git import Actor, Repo
 
 from pootle_fs import Plugin
 
@@ -11,10 +12,32 @@ from .files import GitFSFile
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_COMMIT_MSG = "Translation files updated from Pootle"
+
 
 class GitPlugin(Plugin):
     name = "git"
     file_class = GitFSFile
+
+    @property
+    def author(self):
+        config = self.read_config()
+        try:
+            return Actor(
+                config.get("default", "author_name"),
+                config.get("default", "author_email"))
+        except NoOptionError:
+            return None
+
+    @property
+    def committer(self):
+        config = self.read_config()
+        try:
+            return Actor(
+                config.get("default", "committer_name"),
+                config.get("default", "committer_email"))
+        except NoOptionError:
+            return None
 
     @property
     def repo(self):
@@ -36,6 +59,12 @@ class GitPlugin(Plugin):
     def get_latest_hash(self):
         self.pull()
         return self.repo.commit().hexsha
+
+    def get_commit_message(self, response):
+        config = self.read_config()
+        if config.has_option("default", "commit_message"):
+            return config.get("default", "commit_message")
+        return DEFAULT_COMMIT_MSG
 
     def push_translations(self, msg=None, pootle_path=None, fs_path=None,
                           response=None, status=None):
@@ -68,15 +97,16 @@ class GitPlugin(Plugin):
                     repo_paths = [
                         x for x
                         in self.repo.index.iter_blobs()]
-                    rm_paths = [
-                        os.path.join(
-                            self.local_fs_path,
-                            x.fs_path.strip("/"))
-                        for x
-                        in response['removed']
-                        if x.fs_path.strip("/") in repo_paths]
-                    branch.rm(rm_paths)
-                    branch.commit(msg)
+                    branch.rm(
+                        [os.path.join(self.local_fs_path,
+                                      x.fs_path.strip("/"))
+                         for x
+                         in response['removed']
+                         if x.fs_path.strip("/") in repo_paths])
+                    branch.commit(
+                        self.get_commit_message(response),
+                        author=self.author,
+                        committer=self.committer)
                     branch.push()
         except PushError:
             for action in response["pushed_to_fs"]:

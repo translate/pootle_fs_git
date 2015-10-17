@@ -69,9 +69,10 @@ class GitBranch(object):
                 "Removing path (%s): %s"
                 % (self.project.code, self.name))
 
-    def commit(self, msg):
+    def commit(self, msg, author=None, committer=None):
         # commit
-        self.repo.index.commit("Updating repo")
+        self.repo.index.commit(
+            msg, author=author, committer=committer)
         logger.info(
             "Committing from git branch (%s): %s"
             % (self.project.code, self.name))
