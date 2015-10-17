@@ -62,12 +62,19 @@ class GitPlugin(Plugin):
                         for x
                         in response['pushed_to_fs']]
                     branch.add(add_paths)
+                    # this is a bit of a dirty hack to
+                    # prevent `git rm` on files that
+                    # are not part of the repo
+                    repo_paths = [
+                        x for x
+                        in self.repo.index.iter_blobs()]
                     rm_paths = [
                         os.path.join(
                             self.local_fs_path,
                             x.fs_path.strip("/"))
                         for x
-                        in response['removed']]
+                        in response['removed']
+                        if x.fs_path.strip("/") in repo_paths]
                     branch.rm(rm_paths)
                     branch.commit(msg)
                     branch.push()
