@@ -12,9 +12,9 @@ import os
 import pytest
 from ConfigParser import ConfigParser
 
-from pootle_fs.models import StoreFS
 from pootle_fs_pytest.suite import (
-    run_add_test, run_fetch_test, run_rm_test, run_merge_test)
+    run_add_test, run_fetch_test, run_rm_test, run_merge_test,
+    check_files_match)
 
 from pootle_fs_git.plugin import DEFAULT_COMMIT_MSG
 
@@ -23,26 +23,7 @@ from ..fixtures.plugin import tmp_git
 
 def _check_git_fs(plugin, response):
     with tmp_git(plugin.fs.url) as (tmp_repo_path, tmp_repo):
-        assert all(
-            os.path.exists(
-                os.path.join(
-                    tmp_repo_path,
-                    p.fs_path.strip("/")))
-            for p
-            in response["pushed_to_fs"])
-        assert not any(
-            os.path.exists(
-                os.path.join(
-                    tmp_repo_path,
-                    p.fs_path.strip("/")))
-            for p
-            in response["pruned_from_fs"])
-
-        for response in response["pushed_to_fs"]:
-            store_fs = StoreFS.objects.get(pootle_path=response.pootle_path)
-            serialized = store_fs.store.serialize()
-            assert serialized == store_fs.file.read()
-            # todo - also check that the version in git is the same
+        check_files_match(tmp_repo_path, response)
 
 
 @pytest.mark.django
