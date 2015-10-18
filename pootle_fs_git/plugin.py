@@ -95,7 +95,7 @@ class GitPlugin(Plugin):
                     # prevent `git rm` on files that
                     # are not part of the repo
                     repo_paths = [
-                        x for x
+                        y.path for x, y
                         in self.repo.index.iter_blobs()]
                     branch.rm(
                         [os.path.join(self.local_fs_path,
@@ -108,7 +108,8 @@ class GitPlugin(Plugin):
                         author=self.author,
                         committer=self.committer)
                     branch.push()
-        except PushError:
+        except PushError as e:
+            logger.exception(e)
             for action in response["pushed_to_fs"]:
                 action.failed = True
             for action in response["removed"]:

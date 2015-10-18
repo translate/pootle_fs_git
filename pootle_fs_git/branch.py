@@ -71,11 +71,12 @@ class GitBranch(object):
 
     def commit(self, msg, author=None, committer=None):
         # commit
-        self.repo.index.commit(
+        result = self.repo.index.commit(
             msg, author=author, committer=committer)
         logger.info(
             "Committing from git branch (%s): %s"
             % (self.project.code, self.name))
+        return result
 
     def push(self):
         # push to remote/$master
@@ -84,11 +85,14 @@ class GitBranch(object):
             % (self.name, self.master.name))
 
         if result[0].flags != 256:
-            raise PushError("Commit was unsuccessful")
+            raise PushError(
+                "Commit was unsuccessful: %s"
+                % result[0].summary)
 
         logger.info(
             "Pushing to remote git branch (%s): %s"
             % (self.project.code, self.name))
+        return result
 
     def destroy(self):
         self.repo.git.reset("--hard", "HEAD")
