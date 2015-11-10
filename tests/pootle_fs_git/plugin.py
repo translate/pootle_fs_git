@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) Pootle contributors.
@@ -117,8 +116,10 @@ def test_plugin_commit_author(git_plugin_suite):
         last_author_name = tmp_repo.git.log('-1', '--pretty=%an')
         last_author_email = tmp_repo.git.log('-1', '--pretty=%ae')
         git_config = tmp_repo.config_reader()
-        assert last_author_name == git_config.get_value("user", "name")
-        assert last_author_email == git_config.get_value("user", "email")
+        default_user = os.environ["USER"]
+        default_email = "%s@%s" % (default_user, os.environ["HOSTNAME"])
+        assert last_author_name == git_config.get_value("user", "name", default_user)
+        assert last_author_email == git_config.get_value("user", "email", default_email)
 
     # update the author name/email in config
     with tmp_git(plugin.fs.url) as (tmp_repo_path, tmp_repo):
@@ -164,8 +165,10 @@ def test_plugin_commit_committer(git_plugin_suite):
         last_committer_name = tmp_repo.git.log('-1', '--pretty=%an')
         last_committer_email = tmp_repo.git.log('-1', '--pretty=%ae')
         git_config = tmp_repo.config_reader()
-        assert last_committer_name == git_config.get_value("user", "name")
-        assert last_committer_email == git_config.get_value("user", "email")
+        default_user = os.environ["USER"]
+        default_email = "%s@%s" % (default_user, os.environ["HOSTNAME"])
+        assert last_committer_name == git_config.get_value("user", "name", default_user)
+        assert last_committer_email == git_config.get_value("user", "email", default_email)
 
     # update the committer name/email in config
     with tmp_git(plugin.fs.url) as (tmp_repo_path, tmp_repo):
