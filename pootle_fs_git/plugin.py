@@ -5,6 +5,7 @@ import os
 from git import Actor, Repo
 
 from pootle_fs import Plugin
+from pootle_fs.plugin import responds_to_status
 
 from .branch import tmp_branch, PushError
 from .files import GitFSFile
@@ -66,14 +67,9 @@ class GitPlugin(Plugin):
             return config.get("default", "commit_message")
         return DEFAULT_COMMIT_MSG
 
-    def push_translations(self, msg=None, pootle_path=None, fs_path=None,
-                          response=None, status=None):
-        if status is None:
-            status = self.status(pootle_path=pootle_path, fs_path=fs_path)
-        if response is None:
-            response or self.response_class(self)
-        if not status.has_changed:
-            return
+    @responds_to_status
+    def push_translations(self, status, response, msg=None,
+                          pootle_path=None, fs_path=None):
         try:
             with tmp_branch(self) as branch:
                 response = self.push_translation_files(
