@@ -15,17 +15,18 @@ SECRET_KEY = "test_secret_key"
 
 
 ROOT_DIR = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
-POOTLE_TRANSLATION_DIRECTORY = os.path.join(ROOT_DIR, 'tests', 'data', 'po')
+POOTLE_TRANSLATION_DIRECTORY = os.path.join(
+    ROOT_DIR, 'pytest_pootle', 'data', 'po')
 
-
-# Dummy caching
+# Using the only Redis DB for testing
 CACHES = {
+    # Must set up entries for persistent stores here because we have a check in
+    # place that will abort everything otherwise
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'pootle-tests'
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/15',
+        'TIMEOUT': None,
     },
-    # Must set up entries for persistent stores here because we have a
-    # check in place that will abort everything otherwise
     'redis': {
         'BACKEND': 'django_redis.cache.RedisCache',
         'LOCATION': 'redis://127.0.0.1:6379/15',
@@ -37,8 +38,8 @@ CACHES = {
         'TIMEOUT': None,
     },
     'exports': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'pootle-test-exports',
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': os.path.join(ROOT_DIR, 'tests', 'exports'),
         'TIMEOUT': 259200,  # 3 days.
     },
 }
@@ -69,7 +70,6 @@ SILENCED_SYSTEM_CHECKS = [
 ]
 
 try:
-    INSTALLED_APPS = INSTALLED_APPS + [
-        "pootle_fs", "pootle_fs_git"]
+    INSTALLED_APPS = INSTALLED_APPS + ["pootle_fs_git"]
 except NameError:
     INSTALLED_APPS = ["pootle_fs", "pootle_fs_git"]

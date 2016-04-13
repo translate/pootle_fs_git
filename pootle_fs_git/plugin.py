@@ -85,7 +85,8 @@ class GitPlugin(Plugin):
                             self.local_fs_path,
                             x.fs_path.strip("/"))
                         for x
-                        in response['pushed_to_fs']]
+                        in (response['pushed_to_fs']
+                            + response['merged_from_pootle'])]
                     branch.add(add_paths)
                     # this is a bit of a dirty hack to
                     # prevent `git rm` on files that
@@ -99,6 +100,7 @@ class GitPlugin(Plugin):
                          for x
                          in response['removed']
                          if x.fs_path.strip("/") in repo_paths])
+
                     branch.commit(
                         self.get_commit_message(response),
                         author=self.author,
@@ -108,10 +110,14 @@ class GitPlugin(Plugin):
             logger.exception(e)
             for action in response["pushed_to_fs"]:
                 action.failed = True
+            for action in response["merged_from_pootle"]:
+                action.failed = True
             for action in response["removed"]:
                 action.failed = True
-
-        for action_status in response.completed("pushed_to_fs"):
+        fs_updated = (
+            list(response.completed("pushed_to_fs"))
+            + list(response.completed("merged_from_pootle")))
+        for action_status in fs_updated:
             fs_file = action_status.store_fs.file
             fs_file.on_sync(
                 fs_file.latest_hash,
