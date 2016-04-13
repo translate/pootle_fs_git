@@ -98,8 +98,10 @@ class GitBranch(object):
                 % result[0].summary)
 
         logger.info(
-            "Pushing to remote git branch (%s): %s"
-            % (self.project.code, self.name))
+            "Pushing to remote git branch (%s --> %s): %s"
+            % (self.project.code,
+               self.repo.remotes.origin.url,
+               self.name))
         return result
 
     def destroy(self):

@@ -36,7 +36,6 @@ def _load_fixtures(*modules):
             if not is_pkg:
                 yield name
 
-
 pytest_plugins = tuple(
-    ["pootle_fs"]
+    ['pytest_pootle.plugin']
     + [p for p in _load_fixtures(fixtures, )])
