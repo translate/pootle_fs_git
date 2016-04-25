@@ -107,7 +107,7 @@ class GitBranch(object):
     def destroy(self):
         self.repo.git.reset("--hard", "HEAD")
         self.master.checkout()
-        self.repo.delete_head(self.name)
+        self.repo.delete_head(self.name, force=True)
         self.repo.remotes.origin.pull()
         logger.info(
             "Destroying git branch (%s): %s"
