@@ -1,11 +1,17 @@
-from ConfigParser import NoOptionError
+# -*- coding: utf-8 -*-
+#
+# Copyright (C) Pootle contributors.
+#
+# This file is a part of the Pootle project. It is distributed under the GPL3
+# or later license. See the LICENSE file for a copy of the license and the
+# AUTHORS file for copyright and authorship information.
+
 import logging
 import os
 
 from git import Actor, Repo
 
-from pootle_fs import Plugin
-from pootle_fs.plugin import responds_to_status
+from pootle_fs.plugin import Plugin, responds_to_status
 
 from .branch import tmp_branch, PushError
 from .files import GitFSFile
@@ -22,23 +28,23 @@ class GitPlugin(Plugin):
 
     @property
     def author(self):
-        config = self.read_config()
-        try:
-            return Actor(
-                config.get("default", "author_name"),
-                config.get("default", "author_email"))
-        except NoOptionError:
+        author_name = self.config.get("pootle_fs.author_name")
+        author_email = self.config.get("pootle_fs.author_email")
+        if not (author_name and author_email):
             return None
+        return Actor(
+            self.config["pootle_fs.author_name"],
+            self.config["pootle_fs.author_email"])
 
     @property
     def committer(self):
-        config = self.read_config()
-        try:
-            return Actor(
-                config.get("default", "committer_name"),
-                config.get("default", "committer_email"))
-        except NoOptionError:
+        committer_name = self.config.get("pootle_fs.committer_name")
+        committer_email = self.config.get("pootle_fs.committer_email")
+        if not (committer_name and committer_email):
             return None
+        return Actor(
+            self.config["pootle_fs.committer_name"],
+            self.config["pootle_fs.committer_email"])
 
     @property
     def repo(self):
@@ -49,12 +55,12 @@ class GitPlugin(Plugin):
         if not self.is_cloned:
             logger.info(
                 "Cloning git repository(%s): %s"
-                % (self.project.code, self.fs.url))
-            Repo.clone_from(self.fs.url, self.local_fs_path)
+                % (self.project.code, self.fs_url))
+            Repo.clone_from(self.fs_url, self.local_fs_path)
         else:
             logger.info(
                 "Pulling git repository(%s): %s"
-                % (self.project.code, self.fs.url))
+                % (self.project.code, self.fs_url))
         self.repo.remote().pull("master:master", force=True)
 
     def get_latest_hash(self):
@@ -62,10 +68,9 @@ class GitPlugin(Plugin):
         return self.repo.commit().hexsha
 
     def get_commit_message(self, response):
-        config = self.read_config()
-        if config.has_option("default", "commit_message"):
-            return config.get("default", "commit_message")
-        return DEFAULT_COMMIT_MSG
+        return self.config.get(
+            "pootle_fs.commit_message",
+            DEFAULT_COMMIT_MSG)
 
     @responds_to_status
     def push_translations(self, status, response, msg=None,
@@ -79,7 +84,7 @@ class GitPlugin(Plugin):
                 if response.made_changes:
                     logger.info(
                         "Committing/pushing git repository(%s): %s"
-                        % (self.project.code, self.fs.url))
+                        % (self.project.code, self.fs_url))
                     add_paths = [
                         os.path.join(
                             self.local_fs_path,
