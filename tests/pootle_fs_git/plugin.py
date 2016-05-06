@@ -16,7 +16,7 @@ from pytest_pootle.fs.suite import (
     check_files_match)
 
 from pootle_config.utils import ObjectConfig
-from pootle_fs.projects import FSPlugin
+from pootle_fs.plugin import FSPlugin
 
 from pootle_fs_git.plugin import DEFAULT_COMMIT_MSG
 from pootle_fs_git.utils import tmp_git
@@ -169,7 +169,7 @@ def test_plugin_commit_committer(git_project):
 
     # update the committer name/email in config
     plugin.config["pootle_fs.committer_name"] = NEW_COMMITTER_NAME
-    plugin.config["pootle_fs.commiter_email"] = NEW_COMMITTER_EMAIL
+    plugin.config["pootle_fs.committer_email"] = NEW_COMMITTER_EMAIL
 
     # make further updates
     plugin.add_translations()
@@ -177,8 +177,8 @@ def test_plugin_commit_committer(git_project):
 
     # test that sync_translations committed with new commit committer
     with tmp_git(plugin.fs_url) as (tmp_repo_path, tmp_repo):
-        last_committer_name = tmp_repo.git.log('-1', '--pretty =%cn')
-        last_committer_email = tmp_repo.git.log('-1', '--pretty =%ce')
+        last_committer_name = tmp_repo.git.log('-1', '--pretty=%cn')
+        last_committer_email = tmp_repo.git.log('-1', '--pretty=%ce')
         assert last_committer_name == NEW_COMMITTER_NAME
         assert last_committer_email == NEW_COMMITTER_EMAIL
 

@@ -50,7 +50,7 @@ def git_env(post_db_setup, _django_cursor_wrapper):
 
     from pootle_app.models import Directory
     from pootle_config.utils import ObjectConfig
-    from pootle_fs.projects import FSPlugin
+    from pootle_fs.plugin import FSPlugin
     from pootle_language.models import Language
     from pootle_store.models import Store
 
@@ -178,7 +178,7 @@ def git_env(post_db_setup, _django_cursor_wrapper):
 @pytest.fixture
 def git_plugin_base(tmpdir, settings):
     from pootle_config.utils import ObjectConfig
-    from pootle_fs.projects import FSPlugin
+    from pootle_fs.plugin import FSPlugin
     from pootle_project.models import Project
 
     with get_dir_util() as dir_util:
