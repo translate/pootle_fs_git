@@ -11,7 +11,9 @@ import os
 
 from git import Actor, Repo
 
-from pootle_fs.plugin import Plugin, responds_to_status
+from pootle_fs.decorators import emits_state, responds_to_state
+from pootle_fs.plugin import Plugin
+from pootle_fs.signals import fs_pre_push, fs_post_push
 
 from .branch import tmp_branch, PushError
 from .files import GitFSFile
@@ -48,15 +50,14 @@ class GitPlugin(Plugin):
 
     @property
     def repo(self):
-        return Repo(self.local_fs_path)
+        return Repo(self.project.local_fs_path)
 
     def pull(self):
-        super(GitPlugin, self).pull()
         if not self.is_cloned:
             logger.info(
                 "Cloning git repository(%s): %s"
                 % (self.project.code, self.fs_url))
-            Repo.clone_from(self.fs_url, self.local_fs_path)
+            Repo.clone_from(self.fs_url, self.project.local_fs_path)
         else:
             logger.info(
                 "Pulling git repository(%s): %s"
@@ -72,22 +73,33 @@ class GitPlugin(Plugin):
             "pootle_fs.commit_message",
             DEFAULT_COMMIT_MSG)
 
-    @responds_to_status
-    def push_translations(self, status, response, msg=None,
-                          pootle_path=None, fs_path=None):
+    @responds_to_state
+    @emits_state(pre=fs_pre_push, post=fs_post_push)
+    def sync_push(self, state, response, fs_path=None, pootle_path=None):
+        """
+        Push translations from Pootle to working directory.
+
+        :param fs_path: FS path glob to filter translations
+        :param pootle_path: Pootle path glob to filter translations
+        :returns response: Where ``response`` is an instance of
+          self.respose_class
+        """
+        pushable = state['pootle_staged'] + state['pootle_ahead']
+        for fs_state in pushable:
+            fs_state.store_fs.file.push()
+            response.add('pushed_to_fs', fs_state=fs_state)
+        return response
+
+    def push(self, response):
         try:
             with tmp_branch(self) as branch:
-                response = self.push_translation_files(
-                    pootle_path=pootle_path,
-                    fs_path=fs_path, status=status,
-                    response=response)
                 if response.made_changes:
                     logger.info(
                         "Committing/pushing git repository(%s): %s"
                         % (self.project.code, self.fs_url))
                     add_paths = [
                         os.path.join(
-                            self.local_fs_path,
+                            self.project.local_fs_path,
                             x.fs_path.strip("/"))
                         for x
                         in (response['pushed_to_fs']
@@ -100,7 +112,7 @@ class GitPlugin(Plugin):
                         y.path for x, y
                         in self.repo.index.iter_blobs()]
                     branch.rm(
-                        [os.path.join(self.local_fs_path,
+                        [os.path.join(self.project.local_fs_path,
                                       x.fs_path.strip("/"))
                          for x
                          in response['removed']
