@@ -40,14 +40,14 @@ class GitPlugin(Plugin):
 
     @property
     def committer(self):
-#        committer_name = self.config.get("pootle_fs.committer_name")
-#        committer_email = self.config.get("pootle_fs.committer_email")
- #       if not (committer_name and committer_email):
- #           return None
+        #        committer_name = self.config.get("pootle_fs.committer_name")
+        #        committer_email = self.config.get("pootle_fs.committer_email")
+        #       if not (committer_name and committer_email):
+        #           return None
         return Actor("phlax", "ryan@synca.io")
-#        return Actor(
-#            self.config["pootle_fs.committer_name"],
-#            self.config["pootle_fs.committer_email"])
+    #        return Actor(
+    #            self.config["pootle_fs.committer_name"],
+    #            self.config["pootle_fs.committer_email"])
 
     @property
     def repo(self):
@@ -66,7 +66,7 @@ class GitPlugin(Plugin):
         self.repo.remote().pull("master:master", force=True)
 
     def get_latest_hash(self):
-        self.pull()
+        # self.pull()
         return self.repo.commit().hexsha
 
     def get_commit_message(self, response):
@@ -93,7 +93,10 @@ class GitPlugin(Plugin):
         return response
 
     def push(self, response):
-        if response.made_changes and ("pushed_to_fs" in response or "merged_from_pootle" in response):
+        push_from_pootle = (
+            "pushed_to_fs" in response
+            or "merged_from_pootle" in response)
+        if response.made_changes and push_from_pootle:
             try:
                 with tmp_branch(self) as branch:
                     logger.info(
@@ -138,7 +141,5 @@ class GitPlugin(Plugin):
             + list(response.completed("merged_from_pootle")))
         for action_status in fs_updated:
             fs_file = action_status.store_fs.file
-            fs_file.on_sync(
-                fs_file.latest_hash,
-                action_status.store_fs.store.get_max_unit_revision())
+            fs_file.on_sync()
         return response

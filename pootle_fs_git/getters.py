@@ -9,7 +9,9 @@
 from pootle.core.delegate import response, state
 from pootle.core.plugin import getter
 
-from pootle_fs.delegate import fs_file, fs_finder, fs_matcher, fs_resources
+from pootle_fs.delegate import (
+    fs_file, fs_finder, fs_matcher, fs_resources)
+# , fs_url_validator)
 from pootle_fs.finder import TranslationFileFinder
 from pootle_fs.matcher import FSPathMatcher
 from pootle_fs.resources import FSProjectResources
@@ -18,6 +20,7 @@ from pootle_fs.state import ProjectFSState
 
 from .files import GitFSFile
 from .plugin import GitPlugin
+# from .validators import GitFSUrlValidator
 
 
 @getter(state, sender=GitPlugin)
@@ -48,3 +51,8 @@ def fs_finder_getter(**kwargs):
 @getter(fs_matcher, sender=GitPlugin)
 def fs_matcher_getter(**kwargs):
     return FSPathMatcher
+
+
+# @getter(fs_url_validator, sender=GitPlugin)
+# def fs_url_validator_getter(**kwargs_):
+#    return GitFSUrlValidator
