@@ -15,9 +15,10 @@ import pytest
 
 from git import Repo
 
-from pytest_pootle.fs.utils import create_test_suite
+# from pytest_pootle.fs.utils import create_test_suite
 
 from pootle_fs_git.utils import tmp_git
+
 
 DEFAULT_TRANSLATION_PATHS = OrderedDict(
     [("default", "gnu_style/po/<lang>.po"),
@@ -37,32 +38,28 @@ def get_dir_util():
     dir_util._path_created = {}
 
 
-@pytest.fixture(scope="session", autouse=True)
-def git_env(post_db_setup, _django_cursor_wrapper):
+@pytest.fixture(scope='session')
+def setup_git_env(django_db_setup, django_db_blocker):
+    """Sets up the site DB only if tests requested to use the DB (autouse)."""
     from django.conf import settings
 
-    from pytest_pootle.utils import update_store
-    from pytest_pootle.fs.utils import create_test_suite
     import pytest_pootle
 
     from pytest_pootle.factories import (
         ProjectDBFactory, TranslationProjectFactory)
 
-    from pootle_app.models import Directory
-    from pootle_config.utils import ObjectConfig
-    from pootle_fs.plugin import FSPlugin
+    from pootle_fs.utils import FSPlugin
     from pootle_language.models import Language
-    from pootle_store.models import Store
 
     import tempfile
 
-    with _django_cursor_wrapper:
+    with django_db_blocker.unblock():
         project0 = ProjectDBFactory(
             source_language=Language.objects.get(code="en"),
             code="git_project_0")
 
         language0 = Language.objects.get(code="language0")
-        tp = TranslationProjectFactory(project=project0, language=language0)
+        TranslationProjectFactory(project=project0, language=language0)
 
         initial_src_path = os.path.abspath(
             os.path.join(
@@ -77,82 +74,26 @@ def git_env(post_db_setup, _django_cursor_wrapper):
         with tmp_git(repo_path) as (tmp_repo_path, tmp_repo):
             with get_dir_util() as dir_util:
                 dir_util.copy_tree(initial_src_path, tmp_repo_path)
-            tmp_repo.index.add([".pootle.ini", "*"])
             tmp_repo.index.commit("Initial commit")
             tmp_repo.remotes.origin.push("master:master")
 
-        conf = ObjectConfig(project0)
-        conf["pootle_fs.fs_type"] = "git"
-        conf["pootle_fs.fs_url"] = repo_path
-        conf["pootle_fs.translation_paths"] = OrderedDict(
-            [("default", "gnu_style/po/<lang>.po"),
-             ("subdir1",
-              "gnu_style_named_folders/po-<filename>/<lang>.po"),
-             ("subdir2",
-              "gnu_style_named_files/po/<filename>-<lang>.po"),
-             ("subdir3",
-              "non_gnu_style/locales/<lang>/<directory_path>/<filename>.po")])
-
-        updated_src_path = os.path.abspath(
-            os.path.join(
-                os.path.dirname(pytest_pootle.__file__),
-                "data/fs/example_fs_updated"))
+        project0.config["pootle_fs.fs_type"] = "git"
+        project0.config["pootle_fs.fs_url"] = repo_path
+        project0.config["pootle_fs.translation_mappings"] = {
+            "default": "/<language_code>/<dir_path>/<filename>.<ext>"}
 
         plugin = FSPlugin(project0)
-        plugin.add_translations()
-        plugin.fetch_translations()
-        plugin.sync_translations()
+        plugin.fetch()
+        plugin.add()
+        plugin.sync()
 
-        with tmp_git(repo_path) as (tmp_repo_path, tmp_repo):
-            # merge the update onto the repo src
-            with get_dir_util() as dir_util:
-                dir_util.copy_tree(
-                    updated_src_path,
-                    tmp_repo_path, preserve_times=0)
-            tmp_repo.index.add([".pootle.ini", "*"])
-            tmp_repo.index.commit("Creating test suite")
-            tmp_repo.remotes.origin.push("master:master")
-
-        # conflict
-        pootle_path_conflict = (
-            "%ssubdir3/subsubdir/example3.po"
-            % tp.pootle_path)
-        plugin.pull()
-        update_store(
-            Store.objects.get(pootle_path=pootle_path_conflict),
-            units=(("Hello, world", "Hello, world DB CONFLICT"), ))
-
-        # conflict_untracked
-        subdir3 = Directory.objects.get(
-            pootle_path="%ssubdir3/" % tp.pootle_path)
-        Store.objects.create(
-            translation_project=tp,
-            parent=subdir3,
-            name="example3.po")
-
-        # pootle_ahead
-        pootle_path_ahead = "%ssubdir1/example1.po" % tp.pootle_path
-        update_store(
-            Store.objects.get(pootle_path=pootle_path_ahead),
-            units=(("Hello, world", "Hello, world DB AHEAD"), ))
-
-        # pootle_untracked
-        Store.objects.create(
-            translation_project=tp,
-            parent=subdir3,
-            name="example4.po")
-
-        # pootle_removed
-        Store.objects.get(
-            pootle_path="%ssubdir1/example2.po" % tp.pootle_path).delete()
-
-        create_test_suite(plugin)
+        # create_test_suite(plugin)
 
         project1 = ProjectDBFactory(
             source_language=Language.objects.get(code="en"),
             code="git_project_1")
 
-        tp = TranslationProjectFactory(project=project1, language=language0)
+        TranslationProjectFactory(project=project1, language=language0)
 
         repo_path = os.path.join(fs_dir, "__git_src_project_1__")
         Repo.init(repo_path, bare=True)
@@ -162,23 +103,21 @@ def git_env(post_db_setup, _django_cursor_wrapper):
             tmp_repo.index.add(["*"])
             tmp_repo.index.commit("Initial commit")
             tmp_repo.remotes.origin.push("master:master")
-        conf = ObjectConfig(project1)
-        conf["pootle_fs.fs_type"] = "git"
-        conf["pootle_fs.fs_url"] = repo_path
-        conf["pootle_fs.translation_paths"] = OrderedDict(
-            [("default", "gnu_style/po/<lang>.po"),
-             ("subdir1",
-              "gnu_style_named_folders/po-<filename>/<lang>.po"),
-             ("subdir2",
-              "gnu_style_named_files/po/<filename>-<lang>.po"),
-             ("subdir3",
-              "non_gnu_style/locales/<lang>/<directory_path>/<filename>.po")])
+        project1.config["pootle_fs.fs_type"] = "git"
+        project1.config["pootle_fs.fs_url"] = repo_path
+        project1.config["pootle_fs.translation_mappings"] = {
+            "default": "/<language_code>/<dir_path>/<filename>.<ext>"}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def git_env(request, tests_use_db):
+    if tests_use_db and not request.config.getvalue('reuse_db'):
+        return request.getfuncargvalue('setup_git_env')
 
 
 @pytest.fixture
 def git_plugin_base(tmpdir, settings):
-    from pootle_config.utils import ObjectConfig
-    from pootle_fs.plugin import FSPlugin
+    from pootle_fs.utils import FSPlugin
     from pootle_project.models import Project
 
     with get_dir_util() as dir_util:
@@ -192,12 +131,14 @@ def git_plugin_base(tmpdir, settings):
         repo_path = os.path.join(
             settings.POOTLE_FS_PATH,
             "__git_src_%s__" % project_code)
-        conf = ObjectConfig(project)
-        conf["pootle_fs.fs_type"] = "git"
-        conf["pootle_fs.fs_url"] = repo_path
-        conf["pootle_fs.translation_paths"] = DEFAULT_TRANSLATION_PATHS
+
+        project.config["pootle_fs.fs_type"] = "git"
+        project.config["pootle_fs.fs_url"] = repo_path
+        project.config["pootle_fs.translation_mappings"] = {
+            "default": "/<language_code>/<dir_path>/<filename>.<ext>"}
+
         plugin = FSPlugin(project)
-        if os.path.exists(plugin.local_fs_path):
+        if os.path.exists(project.local_fs_path):
             origin = plugin.repo.remotes.origin
             cw = origin.config_writer
             cw.set("url", plugin.fs_url)
@@ -247,5 +188,6 @@ def _git_remove(plugin, filepath):
 
 @pytest.fixture
 def git_plugin_suite(git_plugin):
-    return create_test_suite(
-        git_plugin, edit_file=_git_edit, remove_file=_git_remove)
+    # return create_test_suite(
+    #    git_plugin, edit_file=_git_edit, remove_file=_git_remove)
+    pass
