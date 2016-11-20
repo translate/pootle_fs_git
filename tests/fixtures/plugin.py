@@ -81,7 +81,6 @@ def setup_git_env(django_db_setup, django_db_blocker):
         project0.config["pootle_fs.fs_url"] = repo_path
         project0.config["pootle_fs.translation_mappings"] = {
             "default": "/<language_code>/<dir_path>/<filename>.<ext>"}
-
         plugin = FSPlugin(project0)
         plugin.fetch()
         plugin.add()

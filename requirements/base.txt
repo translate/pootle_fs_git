@@ -1,2 +1,2 @@
 # pootle>=2.8.0rc1
--e git+https://github.com/translate/pootle
+-e git+https://github.com/translate/pootle#egg=Pootle
