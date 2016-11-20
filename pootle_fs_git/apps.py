@@ -18,3 +18,4 @@ class PootleFSGitConfig(AppConfig):
 
     def ready(self):
         importlib.import_module("pootle_fs_git.providers")
+        importlib.import_module("pootle_fs_git.getters")
