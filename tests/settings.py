@@ -72,4 +72,4 @@ SILENCED_SYSTEM_CHECKS = [
 try:
     INSTALLED_APPS = INSTALLED_APPS + ["pootle_fs_git"]
 except NameError:
-    INSTALLED_APPS = ["pootle_fs", "pootle_fs_git"]
+    INSTALLED_APPS = ["pootle_fs_git"]
