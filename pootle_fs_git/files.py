@@ -22,9 +22,4 @@ class GitFSFile(FSFile):
 
     @property
     def latest_hash(self):
-        return self.repo.git.log(
-            '-1',
-            '--pretty=%H',
-            '--follow',
-            '--',
-            self.file_path)
+        return self.repo.tree()[self.path[1:]].hexsha
