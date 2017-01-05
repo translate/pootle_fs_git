@@ -66,9 +66,9 @@ class GitBranch(object):
     def add(self, paths):
         if paths:
             self.repo.index.add(paths)
-            logger.info(
-                "Adding paths (%s): %s"
-                % (self.project.code, self.name))
+            # logger.info(
+            #    "Adding paths (%s): %s"
+            #    % (self.project.code, self.name))
 
     def rm(self, paths):
         if paths:
@@ -81,16 +81,19 @@ class GitBranch(object):
         # commit
         result = self.repo.index.commit(
             msg, author=author, committer=committer)
-        logger.info(
-            "Committing from git branch (%s): %s"
-            % (self.project.code, self.name))
+        # logger.info(
+        #    "Committing from git branch (%s): %s"
+        #    % (self.project.code, self.name))
         return result
 
     def push(self):
         # push to remote/$master
-        result = self.repo.remotes.origin.push(
-            "%s:%s"
-            % (self.name, self.master.name))
+        try:
+            result = self.repo.remotes.origin.push(
+                "%s:%s"
+                % (self.name, self.master.name))
+        except Exception as e:
+            raise PushError(e)
 
         if result[0].flags != 256:
             raise PushError(
