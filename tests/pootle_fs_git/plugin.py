@@ -6,6 +6,8 @@
 # or later license. See the LICENSE file for a copy of the license and the
 # AUTHORS file for copyright and authorship information.
 
+
+import shutil
 import os
 
 import pytest
@@ -56,10 +58,11 @@ def test_plugin_instance_bad_args(git_project):
 
 
 @pytest.mark.django_db
-def __test_plugin_pull(git_project_1):
+def test_plugin_fetch(git_project_1):
     git_plugin = FSPlugin(git_project_1)
+    shutil.rmtree(git_plugin.project.local_fs_path)
     assert git_plugin.is_cloned is False
-    git_plugin.pull()
+    git_plugin.fetch()
     assert git_plugin.is_cloned is True
 
 
