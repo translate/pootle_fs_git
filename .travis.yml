@@ -4,10 +4,11 @@ language: python
 python:
   - 2.7
 env:
-  matrix:
-    - DJANGO_VERSION=1.7.10 DATABASE_BACKEND=sqlite
-    - DJANGO_VERSION=1.7.10 DATABASE_BACKEND=postgres
-    - DJANGO_VERSION=1.7.10 DATABASE_BACKEND=mysql_innodb
+  - TOXENV=py27-django110-sqlite PYTHONPATH=$HOME/virtualenv/python2.7.9/lib/python2.7/site-packages  TOX_TESTENV_PASSENV="PYTHONPATH"
+  - TOXENV=py27-django110-mysql PYTHONPATH=$HOME/virtualenv/python2.7.9/lib/python2.7/site-packages  TOX_TESTENV_PASSENV="PYTHONPATH"
+  - TOXENV=py27-django110-postgres PYTHONPATH=$HOME/virtualenv/python2.7.9/lib/python2.7/site-packages  TOX_TESTENV_PASSENV="PYTHONPATH"
+  # Meta
+  # - TOXENV=project PYTHONPATH=$HOME/virtualenv/python2.7.9/lib/python2.7/site-packages  TOX_TESTENV_PASSENV="PYTHONPATH"
 cache:
   apt: true
   directories:
@@ -28,7 +29,6 @@ before_script:
   - if [[ $DATABASE_BACKEND == 'mysql_innodb' ]]; then mysql -e 'create database pootle CHARACTER SET utf8 COLLATE utf8_general_ci;'; fi
   - if [[ $DATABASE_BACKEND == 'mysql_innodb' ]]; then mysql -e "SET GLOBAL wait_timeout = 36000;"; fi
 script:
-  - py.test -vv
+  - tox -e $TOXENV
 services:
   - redis-server
-
