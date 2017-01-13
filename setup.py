@@ -30,5 +30,5 @@ setup(
     ],
     keywords='pootle filesystem plugins',
     packages=find_packages(exclude=['contrib', 'docs', 'tests*']),
-    install_requires=['pootle', "gitpython"],
+    install_requires=['pootle', "gitpython==2.1.1"],
 )
