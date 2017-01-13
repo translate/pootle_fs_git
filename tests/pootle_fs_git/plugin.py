@@ -60,7 +60,6 @@ def test_plugin_instance_bad_args(git_project):
 @pytest.mark.django_db
 def test_plugin_fetch(git_project_1):
     git_plugin = FSPlugin(git_project_1)
-    shutil.rmtree(git_plugin.project.local_fs_path)
     assert git_plugin.is_cloned is False
     git_plugin.fetch()
     assert git_plugin.is_cloned is True

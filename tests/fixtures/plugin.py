@@ -123,7 +123,7 @@ def git_plugin_base(tmpdir, settings):
         dir_util.copy_tree(
             settings.POOTLE_FS_PATH,
             str(tmpdir))
-    settings.POOTLE_FS_PATH = str(tmpdir)
+    settings.POOTLE_FS_WORKING_PATH = str(tmpdir)
     for project_code in ["project_0", "project_1"]:
         project = Project.objects.get(
             code="git_%s" % project_code)
