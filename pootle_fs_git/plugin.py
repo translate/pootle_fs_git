@@ -10,8 +10,10 @@ import logging
 import os
 
 from git import Actor, Repo
+from git.exc import GitCommandError
 
 from pootle_fs.decorators import emits_state, responds_to_state
+from pootle_fs.exceptions import FSFetchError
 from pootle_fs.plugin import Plugin
 from pootle_fs.signals import fs_pre_push, fs_post_push
 
@@ -58,12 +60,18 @@ class GitPlugin(Plugin):
             logger.info(
                 "Cloning git repository(%s): %s"
                 % (self.project.code, self.fs_url))
-            Repo.clone_from(self.fs_url, self.project.local_fs_path)
+            try:
+                Repo.clone_from(self.fs_url, self.project.local_fs_path)
+            except GitCommandError as e:
+                raise FSFetchError(e)
         else:
             logger.info(
                 "Pulling git repository(%s): %s"
                 % (self.project.code, self.fs_url))
-        self.repo.remote().pull("master:master", force=True)
+            try:
+                self.repo.remote().pull("master:master", force=True)
+            except GitCommandError as e:
+                raise FSFetchError(e)
 
     @property
     def latest_hash(self):
