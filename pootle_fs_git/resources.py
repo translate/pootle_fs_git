@@ -13,9 +13,12 @@ class GitProjectStateResources(FSProjectStateResources):
 
     @property
     def file_hashes(self):
-        hashes = {}
+        _hashes = {}
         found = [x[1] for x in self.found_file_matches]
         for item in self.context.repo.tree().traverse():
             if "/%s" % item.path in found:
-                hashes["/%s" % item.path] = item.hexsha
+                _hashes["/%s" % item.path] = item.hexsha
+        hashes = {}
+        for pootle_path, path in self.found_file_matches:
+            hashes[pootle_path] = _hashes[path]
         return hashes
