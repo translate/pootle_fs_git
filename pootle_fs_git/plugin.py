@@ -32,24 +32,31 @@ class GitPlugin(Plugin):
 
     @property
     def author(self):
-        # author_name = self.config.get("pootle_fs.author_name")
-        # author_email = self.config.get("pootle_fs.author_email")
-        # if not (author_name and author_email):
-        #    return None
-        return Actor("phlax", "ryan@synca.io")
-        #    self.config["pootle_fs.author_name"],
-        #    self.config["pootle_fs.author_email"])
+        from django.conf import settings
+
+        author_name = self.config.get(
+            "pootle.fs.author_name",
+            getattr(settings, "POOTLE_FS_AUTHOR"))
+        author_email = self.config.get(
+            "pootle.fs.author_email",
+            getattr(settings, "POOTLE_FS_AUTHOR_EMAIL"))
+        if not (author_name and author_email):
+            return None
+        return Actor(author_name, author_email)
 
     @property
     def committer(self):
-        #        committer_name = self.config.get("pootle_fs.committer_name")
-        #        committer_email = self.config.get("pootle_fs.committer_email")
-        #       if not (committer_name and committer_email):
-        #           return None
-        return Actor("phlax", "ryan@synca.io")
-    #        return Actor(
-    #            self.config["pootle_fs.committer_name"],
-    #            self.config["pootle_fs.committer_email"])
+        from django.conf import settings
+
+        committer_name = self.config.get(
+            "pootle.fs.committer_name",
+            getattr(settings, "POOTLE_FS_COMMITTER"))
+        committer_email = self.config.get(
+            "pootle.fs.committer_email",
+            getattr(settings, "POOTLE_FS_COMMITTER_EMAIL"))
+        if not (committer_name and committer_email):
+            return None
+        return Actor(committer_name, committer_email)
 
     @property
     def repo(self):
