@@ -9,17 +9,12 @@
 import logging
 
 from pootle_fs.files import FSFile
-from pootle_fs.utils import FSPlugin
 
 
 logger = logging.getLogger(__name__)
 
 
 class GitFSFile(FSFile):
-
-    @property
-    def plugin(self):
-        return FSPlugin(self.store_fs.project)
 
     @property
     def repo(self):
