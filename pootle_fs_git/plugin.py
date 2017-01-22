@@ -12,6 +12,8 @@ import os
 from git import Actor, Repo
 from git.exc import GitCommandError
 
+from django.conf import settings
+
 from pootle_fs.decorators import emits_state, responds_to_state
 from pootle_fs.exceptions import FSFetchError
 from pootle_fs.plugin import Plugin
@@ -26,34 +28,53 @@ logger = logging.getLogger(__name__)
 DEFAULT_COMMIT_MSG = "Translation files updated from Pootle"
 
 
+class Changelog(object):
+
+    def __init__(self, response):
+        self.response = response
+
+    @property
+    def commits(self):
+        return self.by_author(self.response)
+
+    def by_author(self, response):
+        """Groups into a single commit, if there is more than one author
+        credits, are added in commit message"""
+        authors = set()
+        paths = set()
+        for resp in response.completed("pushed_to_fs", "merged_from_pootle"):
+            if resp.store_fs.pootle_path in paths:
+                continue
+            paths.add(resp.store_fs.path)
+            user = resp.store_fs.store.data.last_submission.submitter
+            authors.add((user.username, user.email))
+        return [dict(authors=authors, paths=paths)]
+
+
 class GitPlugin(Plugin):
     name = "git"
     file_class = GitFSFile
 
     @property
     def author(self):
-        from django.conf import settings
-
-        author_name = self.config.get(
+        author_name = self.project.config.get(
             "pootle.fs.author_name",
-            getattr(settings, "POOTLE_FS_AUTHOR"))
-        author_email = self.config.get(
+            getattr(settings, "POOTLE_FS_AUTHOR", None))
+        author_email = self.project.config.get(
             "pootle.fs.author_email",
-            getattr(settings, "POOTLE_FS_AUTHOR_EMAIL"))
+            getattr(settings, "POOTLE_FS_AUTHOR_EMAIL", None))
         if not (author_name and author_email):
             return None
         return Actor(author_name, author_email)
 
     @property
     def committer(self):
-        from django.conf import settings
-
-        committer_name = self.config.get(
+        committer_name = self.project.config.get(
             "pootle.fs.committer_name",
-            getattr(settings, "POOTLE_FS_COMMITTER"))
-        committer_email = self.config.get(
+            getattr(settings, "POOTLE_FS_COMMITTER", None))
+        committer_email = self.project.config.get(
             "pootle.fs.committer_email",
-            getattr(settings, "POOTLE_FS_COMMITTER_EMAIL"))
+            getattr(settings, "POOTLE_FS_COMMITTER_EMAIL", None))
         if not (committer_name and committer_email):
             return None
         return Actor(committer_name, committer_email)
@@ -85,11 +106,14 @@ class GitPlugin(Plugin):
         if self.is_cloned:
             return self.repo.commit().hexsha
 
-    def get_commit_message(self, response):
-        return DEFAULT_COMMIT_MSG
-        # return self.config.get(
-        #    "pootle_fs.commit_message",
-        #    DEFAULT_COMMIT_MSG)
+    @property
+    def commit_message(self):
+        return self.project.config.get(
+            "pootle.fs.commit_message",
+            getattr(
+                settings,
+                "POOTLE_FS_AUTHOR",
+                DEFAULT_COMMIT_MSG))
 
     @responds_to_state
     @emits_state(pre=fs_pre_push, post=fs_post_push)
@@ -111,73 +135,47 @@ class GitPlugin(Plugin):
             response.add('pushed_to_fs', fs_state=fs_state)
         return response
 
-    def _commit_to_branch(self, branch, path, authors):
+    def _commit_to_branch(self, branch, paths=(), authors=()):
         add_paths = [
             os.path.join(
                 self.project.local_fs_path,
                 path[1:])
-            for x
-            in [path]]
-        author = authors.pop()
+            for path
+            in paths]
+        if len(authors) > 1:
+            author = self.author
+            commit_message = (
+                "%s\n\nAuthors:\n%s"
+                % (self.commit_message,
+                   "\n".join(
+                       [("%s (%s)" % (username, email))
+                        for username, email in authors])))
+        else:
+            commit_message = self.commit_message
+            author = Actor(*authors.pop())
         branch.add(add_paths)
-        # self.get_commit_message(response)
         branch.commit(
-            "Updating from Pootle",
+            commit_message,
             author=author,
             committer=self.committer)
 
     def _push_to_branch(self, commits):
         try:
             with tmp_branch(self) as branch:
-                # logger.info(
-                #    "Committing/pushing git repository(%s): %s"
-                #    % (self.project.code, self.fs_url))
                 for commit in commits:
-                    self._commit_to_branch(branch, *commit)
+                    self._commit_to_branch(branch, **commit)
                 branch.push()
         except PushError as e:
             logger.exception(e)
             raise e
-
-    def _map_authors_to_commits(self, response):
-        stores = {}
-        _commits = {}
-        for resp in response.completed("pushed_to_fs", "merged_from_pootle"):
-            store = resp.store_fs.store
-            last_sync = resp.store_fs.last_sync_revision
-            if last_sync:
-                units_between = store.unit_set.filter(revision__gt=last_sync)
-            else:
-                units_between = store.unit_set.all()
-            stores[resp.store_fs.path] = []
-            changed_units = units_between.values_list(
-                "revision",
-                "submitted_by__username",
-                "submitted_by__full_name",
-                "submitted_by__email")
-            for revision, username, fullname, email in changed_units:
-                author = Actor(fullname or username, email)
-                stores[resp.store_fs.path].append((revision, author))
-        for store, data in stores.items():
-            commit_revision = max([x[0] for x in data])
-            authors = set([x[1] for x in data])
-            _commits[commit_revision] = _commits.get(commit_revision, [])
-            _commits[commit_revision].append((store, authors))
-        commits = []
-        for revision in sorted(_commits.keys()):
-            commit = _commits[revision]
-            for store, authors in commit:
-                commits.append((store, authors))
-        return commits
 
     def push(self, response):
         push_from_pootle = (
             "pushed_to_fs" in response
             or "merged_from_pootle" in response)
         if response.made_changes and push_from_pootle:
-            commits = self._map_authors_to_commits(response)
             try:
-                self._push_to_branch(commits)
+                self._push_to_branch(Changelog(response).commits)
             except PushError as e:
                 raise e
                 for action in response["pushed_to_fs"]:
