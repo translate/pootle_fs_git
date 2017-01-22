@@ -59,4 +59,4 @@ class GithubUpstream(UpstreamProvider):
             upstream_url=self.upstream_url,
             fs_path=self.fs_path,
             revision_url=self.revision_url,
-            lastest_hash=self.latest_hash)
+            latest_hash=self.latest_hash)
