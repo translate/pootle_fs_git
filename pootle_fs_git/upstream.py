@@ -38,13 +38,13 @@ class GithubUpstream(UpstreamProvider):
 
     @property
     def latest_hash(self):
-        self.plugin.latest_hash[:10]
+        return self.plugin.latest_hash[:10]
 
     @property
     def revision_url(self):
         revision_url = (
             "%s/tree/%s"
-            % (self.fs_url, self.latest_hash))
+            % (self.upstream_url, self.latest_hash))
         if not self.location:
             return revision_url
         return (
