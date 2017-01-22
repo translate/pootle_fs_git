@@ -28,3 +28,8 @@ class GitFSFile(FSFile):
     @property
     def latest_hash(self):
         return self.repo.tree()[self.path[1:]].hexsha
+
+    @property
+    def latest_author(self):
+        author = self.repo.commit().author
+        return author.name, author.email
