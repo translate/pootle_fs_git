@@ -21,10 +21,16 @@ class GitFSFile(FSFile):
         return self.plugin.repo
 
     @property
+    def last_commit(self):
+        return self.repo.iter_commits(
+            paths=self.path[1:],
+            max_count=1).next()
+
+    @property
     def latest_hash(self):
         return self.repo.tree()[self.path[1:]].hexsha
 
     @property
     def latest_author(self):
-        author = self.repo.commit().author
+        author = self.last_commit.author
         return author.name, author.email
