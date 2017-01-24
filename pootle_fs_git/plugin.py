@@ -72,7 +72,7 @@ class Changelog(object):
             else:
                 commit.add(resp.fs_path)
                 user = resp.store_fs.store.data.last_submission.submitter
-                commit.add_author(user.username, user.email)
+                commit.add_author(user.display_name, user.email)
         return [commit]
 
 
@@ -173,8 +173,8 @@ class GitPlugin(Plugin):
                 "%s\n\nAuthors:\n%s"
                 % (self.commit_message,
                    "\n".join(
-                       [("%s (%s)" % (username, email))
-                        for username, email in commit.authors])))
+                       [("%s <%s>" % (display_name, email))
+                        for display_name, email in commit.authors])))
         else:
             commit_message = self.commit_message
             author = (
