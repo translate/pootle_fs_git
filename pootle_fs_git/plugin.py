@@ -28,6 +28,27 @@ logger = logging.getLogger(__name__)
 DEFAULT_COMMIT_MSG = "Translation files updated from Pootle"
 
 
+class Commit(object):
+
+    def __init__(self):
+        self.to_add = set()
+        self.to_remove = set()
+        self.authors = set()
+
+    def add(self, path):
+        self.to_add.add(path)
+
+    def remove(self, path):
+        self.to_remove.add(path)
+
+    def add_author(self, name, email):
+        self.authors.add((name, email))
+
+    @property
+    def paths(self):
+        return self.to_add.union(self.to_remove)
+
+
 class Changelog(object):
 
     def __init__(self, response):
@@ -40,15 +61,19 @@ class Changelog(object):
     def by_author(self, response):
         """Groups into a single commit, if there is more than one author
         credits, are added in commit message"""
-        authors = set()
-        paths = set()
-        for resp in response.completed("pushed_to_fs", "merged_from_pootle"):
-            if resp.store_fs.pootle_path in paths:
+        commit = Commit()
+        completed = response.completed(
+            "pushed_to_fs", "merged_from_pootle", "removed")
+        for resp in completed:
+            if resp.pootle_path in commit.paths:
                 continue
-            paths.add(resp.store_fs.path)
-            user = resp.store_fs.store.data.last_submission.submitter
-            authors.add((user.username, user.email))
-        return [dict(authors=authors, paths=paths)]
+            if resp.action_type == "removed":
+                commit.remove(resp.fs_path)
+            else:
+                commit.add(resp.fs_path)
+                user = resp.store_fs.store.data.last_submission.submitter
+                commit.add_author(user.username, user.email)
+        return [commit]
 
 
 class GitPlugin(Plugin):
@@ -135,35 +160,39 @@ class GitPlugin(Plugin):
             response.add('pushed_to_fs', fs_state=fs_state)
         return response
 
-    def _commit_to_branch(self, branch, paths=(), authors=()):
+    def _commit_to_branch(self, branch, commit):
         add_paths = [
             os.path.join(
                 self.project.local_fs_path,
                 path[1:])
             for path
-            in paths]
-        if len(authors) > 1:
+            in commit.to_add]
+        if len(commit.authors) > 1:
             author = self.author
             commit_message = (
                 "%s\n\nAuthors:\n%s"
                 % (self.commit_message,
                    "\n".join(
                        [("%s (%s)" % (username, email))
-                        for username, email in authors])))
+                        for username, email in commit.authors])))
         else:
             commit_message = self.commit_message
-            author = Actor(*authors.pop())
+            author = (
+                Actor(*commit.authors.pop())
+                if commit.authors
+                else self.author)
+        branch.rm(commit.to_remove)
         branch.add(add_paths)
         branch.commit(
             commit_message,
             author=author,
             committer=self.committer)
 
-    def _push_to_branch(self, commits):
+    def _push_to_branch(self, changelog):
         try:
             with tmp_branch(self) as branch:
-                for commit in commits:
-                    self._commit_to_branch(branch, **commit)
+                for commit in changelog.commits:
+                    self._commit_to_branch(branch, commit)
                 branch.push()
         except PushError as e:
             logger.exception(e)
@@ -172,10 +201,11 @@ class GitPlugin(Plugin):
     def push(self, response):
         push_from_pootle = (
             "pushed_to_fs" in response
-            or "merged_from_pootle" in response)
+            or "merged_from_pootle" in response
+            or "removed" in response)
         if response.made_changes and push_from_pootle:
             try:
-                self._push_to_branch(Changelog(response).commits)
+                self._push_to_branch(Changelog(response))
             except PushError as e:
                 raise e
                 for action in response["pushed_to_fs"]:

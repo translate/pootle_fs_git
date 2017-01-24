@@ -71,11 +71,14 @@ class GitBranch(object):
             #    % (self.project.code, self.name))
 
     def rm(self, paths):
-        if paths:
-            self.repo.index.remove(paths)
+        paths = [p[1:] for p in paths]
+        indexed = set(x[0] for x in self.repo.index.entries.keys())
+        paths = set(paths).intersection(indexed)
+        for path in paths:
+            self.repo.index.remove(path)
             logger.info(
-                "Removing path (%s): %s"
-                % (self.project.code, self.name))
+                "Removing path (%s:%s): %s"
+                % (self.project.code, path, self.name))
 
     def commit(self, msg, author=None, committer=None):
         # commit
