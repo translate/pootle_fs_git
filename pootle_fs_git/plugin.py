@@ -51,7 +51,8 @@ class Commit(object):
 
 class Changelog(object):
 
-    def __init__(self, response):
+    def __init__(self, plugin, response):
+        self.plugin = plugin
         self.response = response
 
     @property
@@ -64,11 +65,16 @@ class Changelog(object):
         commit = Commit()
         completed = response.completed(
             "pushed_to_fs", "merged_from_pootle", "removed")
+        tree = self.plugin.repo.tree()
         for resp in completed:
             if resp.pootle_path in commit.paths:
                 continue
             if resp.action_type == "removed":
-                commit.remove(resp.fs_path)
+                try:
+                    tree[resp.fs_path[1:]]
+                    commit.remove(resp.fs_path)
+                except KeyError:
+                    pass
             else:
                 commit.add(resp.fs_path)
                 user = resp.store_fs.store.data.last_submission.submitter
@@ -189,11 +195,15 @@ class GitPlugin(Plugin):
             committer=self.committer)
 
     def _push_to_branch(self, changelog):
+        pushed = False
         try:
             with tmp_branch(self) as branch:
                 for commit in changelog.commits:
-                    self._commit_to_branch(branch, commit)
-                branch.push()
+                    if commit.paths:
+                        pushed = True
+                        self._commit_to_branch(branch, commit)
+                if pushed:
+                    branch.push()
         except PushError as e:
             logger.exception(e)
             raise e
@@ -205,15 +215,15 @@ class GitPlugin(Plugin):
             or "removed" in response)
         if response.made_changes and push_from_pootle:
             try:
-                self._push_to_branch(Changelog(response))
+                self._push_to_branch(Changelog(self, response))
             except PushError as e:
-                raise e
                 for action in response["pushed_to_fs"]:
                     action.failed = True
                 for action in response["merged_from_pootle"]:
                     action.failed = True
                 for action in response["removed"]:
                     action.failed = True
+                raise e
         return response
 
     def get_file_hash(self, path):
