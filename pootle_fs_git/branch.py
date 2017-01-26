@@ -48,7 +48,7 @@ class GitBranch(object):
         return self.__branch__
 
     def create(self):
-        logger.info(
+        logger.debug(
             "Creating git branch (%s): %s"
             % (self.project.code, self.name))
         origin = self.master.tracking_branch()
@@ -59,7 +59,7 @@ class GitBranch(object):
     def checkout(self):
         if not self.is_active:
             self.branch.checkout()
-            logger.info(
+            logger.debug(
                 "Checking out git branch (%s): %s"
                 % (self.project.code, self.name))
 
@@ -76,7 +76,7 @@ class GitBranch(object):
         paths = set(paths).intersection(indexed)
         for path in paths:
             self.repo.index.remove(path)
-            logger.info(
+            logger.debug(
                 "Removing path (%s:%s): %s"
                 % (self.project.code, path, self.name))
 
@@ -115,7 +115,7 @@ class GitBranch(object):
         self.master.checkout()
         self.repo.delete_head(self.name, force=True)
         self.repo.remotes.origin.pull()
-        logger.info(
+        logger.debug(
             "Destroying git branch (%s): %s"
             % (self.project.code, self.name))
 
