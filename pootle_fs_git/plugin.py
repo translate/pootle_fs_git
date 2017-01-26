@@ -14,10 +14,8 @@ from git.exc import GitCommandError
 
 from django.conf import settings
 
-from pootle_fs.decorators import emits_state, responds_to_state
 from pootle_fs.exceptions import FSFetchError
 from pootle_fs.plugin import Plugin
-from pootle_fs.signals import fs_pre_push, fs_post_push
 
 from .branch import tmp_branch, PushError
 from .files import GitFSFile
@@ -145,26 +143,6 @@ class GitPlugin(Plugin):
                 settings,
                 "POOTLE_FS_AUTHOR",
                 DEFAULT_COMMIT_MSG))
-
-    @responds_to_state
-    @emits_state(pre=fs_pre_push, post=fs_post_push)
-    def sync_push(self, state, response, fs_path=None, pootle_path=None):
-        """
-        Push translations from Pootle to working directory.
-
-        :param fs_path: FS path glob to filter translations
-        :param pootle_path: Pootle path glob to filter translations
-        :returns response: Where ``response`` is an instance of
-          self.respose_class
-        """
-        pushable = (
-            state['pootle_staged']
-            + state['pootle_ahead']
-            + state["merge_fs_wins"])
-        for fs_state in pushable:
-            fs_state.store_fs.file.push()
-            response.add('pushed_to_fs', fs_state=fs_state)
-        return response
 
     def _commit_to_branch(self, branch, commit):
         add_paths = [
