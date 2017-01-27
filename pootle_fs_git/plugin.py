@@ -62,7 +62,7 @@ class Changelog(object):
         credits, are added in commit message"""
         commit = Commit()
         completed = response.completed(
-            "pushed_to_fs", "merged_from_pootle", "removed")
+            "pushed_to_fs", "merged_from_pootle", "removed", "merged_from_fs")
         tree = self.plugin.repo.tree()
         for resp in completed:
             if resp.pootle_path in commit.paths:
@@ -190,6 +190,7 @@ class GitPlugin(Plugin):
         push_from_pootle = (
             "pushed_to_fs" in response
             or "merged_from_pootle" in response
+            or "merged_from_fs" in response
             or "removed" in response)
         if response.made_changes and push_from_pootle:
             try:
