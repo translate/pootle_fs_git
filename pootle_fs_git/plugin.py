@@ -167,10 +167,12 @@ class GitPlugin(Plugin):
                 else self.author)
         branch.rm(commit.to_remove)
         branch.add(add_paths)
-        branch.commit(
-            commit_message,
-            author=author,
-            committer=self.committer)
+        if self.repo.is_dirty():
+            branch.commit(
+                commit_message,
+                author=author,
+                committer=self.committer)
+            return True
 
     def _push_to_branch(self, changelog):
         pushed = False
@@ -178,8 +180,8 @@ class GitPlugin(Plugin):
             with tmp_branch(self) as branch:
                 for commit in changelog.commits:
                     if commit.paths:
-                        pushed = True
-                        self._commit_to_branch(branch, commit)
+                        _pushed = self._commit_to_branch(branch, commit)
+                        pushed = pushed or _pushed
                 if pushed:
                     branch.push()
         except PushError as e:
@@ -199,6 +201,8 @@ class GitPlugin(Plugin):
                 for action in response["pushed_to_fs"]:
                     action.failed = True
                 for action in response["merged_from_pootle"]:
+                    action.failed = True
+                for action in response["merged_from_fs"]:
                     action.failed = True
                 for action in response["removed"]:
                     action.failed = True
