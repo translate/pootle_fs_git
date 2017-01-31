@@ -28,7 +28,9 @@ class GitFSFile(FSFile):
 
     @property
     def latest_hash(self):
-        return self.repo.tree()[self.path[1:]].hexsha
+        tree = self.repo.tree()
+        if self.path[1:] in tree:
+            return tree[self.path[1:]].hexsha
 
     @property
     def latest_author(self):
