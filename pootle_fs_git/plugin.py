@@ -75,8 +75,10 @@ class Changelog(object):
                     pass
             else:
                 commit.add(resp.fs_path)
-                user = resp.store_fs.store.data.last_submission.submitter
-                commit.add_author(user.display_name, user.email)
+                last_sub = resp.store_fs.store.data.last_submission
+                if last_sub != None:
+                    user = resp.store_fs.store.data.last_submission.submitter
+                    commit.add_author(user.display_name, user.email)
         return [commit]
 
 
